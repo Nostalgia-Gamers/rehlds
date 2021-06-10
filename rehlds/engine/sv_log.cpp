@@ -140,11 +140,11 @@ void Log_Open(void)
 		temp = Cvar_VariableString("logsdir");
 
 		if (!temp || Q_strlen(temp) <= 0 || Q_strstr(temp, ":") || Q_strstr(temp, ".."))
-			Q_snprintf(szFileBase, sizeof(szFileBase), "logs/L%02i%02i", today->tm_mon + 1, today->tm_mday);
+			Q_snprintf(szFileBase, sizeof(szFileBase), "logs/L%04i%02i%02i", today->tm_year + 1900, today->tm_mon + 1, today->tm_mday);
 
-		else Q_snprintf(szFileBase, sizeof(szFileBase), "%s/L%02i%02i", temp, today->tm_mon + 1, today->tm_mday);
+		else Q_snprintf(szFileBase, sizeof(szFileBase), "%s/L%04i%02i%02i", temp, today->tm_year + 1900, today->tm_mon + 1, today->tm_mday);
 
-		for (i = 0; i < 1000; i++)
+		for (i = 1; i < 1000; i++)
 		{
 			Q_snprintf(szTestFile, sizeof(szTestFile), "%s-%03i.log", szFileBase, i);
 
