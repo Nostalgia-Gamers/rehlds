@@ -37,6 +37,7 @@ typedef struct server_log_s
 	qboolean net_log_;
 	netadr_t net_address_;
 	void *file;
+	int current_day;
 } server_log_t;
 
 typedef struct server_stats_s

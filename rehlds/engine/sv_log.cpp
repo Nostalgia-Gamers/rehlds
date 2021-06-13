@@ -124,7 +124,10 @@ void Log_Open(void)
 	FileHandle_t fp;
 	char *temp;
 
-	if (!g_psvs.log.active || (sv_log_onefile.value != 0.0f && g_psvs.log.file))
+	time(&ltime);
+	today = localtime(&ltime);
+
+	if (!g_psvs.log.active || (sv_log_onefile.value != 0.0f && g_psvs.log.file && g_psvs.log.current_day == today->tm_mday))
 		return;
 
 	if (mp_logfile.value == 0.0f)
@@ -132,19 +135,18 @@ void Log_Open(void)
 	else
 	{
 		Log_Close();
-		time(&ltime);
-		today = localtime(&ltime);
 
+		g_psvs.log.current_day = today->tm_mday;
 		temp = Cvar_VariableString("logsdir");
 
 		if (!temp || Q_strlen(temp) <= 0 || Q_strstr(temp, ":") || Q_strstr(temp, ".."))
-			Q_snprintf(szFileBase, sizeof(szFileBase), "logs/L%02i%02i", today->tm_mon + 1, today->tm_mday);
+			Q_snprintf(szFileBase, sizeof(szFileBase), "logs/L%04i%02i%02i", today->tm_year + 1900, today->tm_mon + 1, today->tm_mday);
 
-		else Q_snprintf(szFileBase, sizeof(szFileBase), "%s/L%02i%02i", temp, today->tm_mon + 1, today->tm_mday);
+		else Q_snprintf(szFileBase, sizeof(szFileBase), "%s/L%04i%02i%02i", temp, today->tm_year + 1900, today->tm_mon + 1, today->tm_mday);
 
-		for (i = 0; i < 1000; i++)
+		for (i = 1; i < 1000; i++)
 		{
-			Q_snprintf(szTestFile, sizeof(szTestFile), "%s%03i.log", szFileBase, i);
+			Q_snprintf(szTestFile, sizeof(szTestFile), "%s-%03i.log", szFileBase, i);
 
 			COM_FixSlashes(szTestFile);
 			COM_CreatePath(szTestFile);
