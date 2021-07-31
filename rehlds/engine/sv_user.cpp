@@ -320,7 +320,7 @@ bool EXT_FUNC SV_ShouldSendConsistencyList_mod(IGameClient *cl, bool forceConsis
 	if (g_psvs.maxclients == 1 || g_psv.num_consistency == 0 || cl->IsProxy())
 		return false;
 
-	if ((!forceConsistency && mp_consistency.value == 0.0f))
+	if (!forceConsistency && mp_consistency.value == 0.0f)
 		return false;
 
 	return true;
@@ -781,6 +781,14 @@ void SV_RunCmd(usercmd_t *ucmd, int random_seed)
 
 	if (!host_client->fakeclient)
 		SV_SetupMove(host_client);
+
+#ifdef REHLDS_FIXES
+	if (sv_usercmd_custom_random_seed.value)
+	{
+		float fltTimeNow = float(Sys_FloatTime() * 1000.0);
+		random_seed = *reinterpret_cast<int *>((char *)&fltTimeNow);
+	}
+#endif
 
 	gEntityInterface.pfnCmdStart(sv_player, ucmd, random_seed);
 	frametime = float(ucmd->msec * 0.001);
@@ -1494,31 +1502,44 @@ void SV_EstablishTimeBase(client_t *cl, usercmd_t *cmds, int dropped, int numbac
 
 void SV_EstablishTimeBase_internal(client_t *cl, usercmd_t *cmds, int dropped, int numbackup, int numcmds)
 {
-	int cmdnum;
-	double runcmd_time;
+	int		i;
+	double	runcmd_time = 0.0;
+	double	time_at_end = 0.0;
+	constexpr int MAX_DROPPED_CMDS = 24;
 
-	runcmd_time = 0.0;
-	cmdnum = dropped;
-	if (dropped < 24)
+	// If we haven't dropped too many packets, then run some commands
+	if (dropped < MAX_DROPPED_CMDS)
 	{
 		if (dropped > numbackup)
 		{
-			cmdnum = dropped - (dropped - numbackup);
-			runcmd_time = (double)cl->lastcmd.msec * (dropped - numbackup) / 1000.0;
+			// Con_Printf("%s: lost %i cmds\n", __func__, dropped - numbackup);
 		}
 
-		for (; cmdnum > 0; cmdnum--)
+		int droppedcmds = dropped;
+
+		// Run the last known cmd for each dropped cmd we don't have a backup for
+		while (droppedcmds > numbackup)
 		{
-			runcmd_time += cmds[cmdnum - 1 + numcmds].msec / 1000.0;
+			runcmd_time += cl->lastcmd.msec / 1000.0;
+			droppedcmds--;
+		}
+
+		// Now run the "history" commands if we still have dropped packets
+		while (droppedcmds > 0)
+		{
+			int cmdnum = numcmds + droppedcmds - 1;
+			runcmd_time += cmds[cmdnum].msec / 1000.0;
+			droppedcmds--;
 		}
 	}
 
-	for (; numcmds > 0; numcmds--)
+	// Now run any new command(s). Go backward because the most recent command is at index 0
+	for (i = numcmds - 1; i >= 0; i--)
 	{
-		runcmd_time += cmds[numcmds - 1].msec / 1000.0;
+		time_at_end += cmds[i].msec / 1000.0;
 	}
 
-	cl->svtimebase = host_frametime + g_psv.time - runcmd_time;
+	cl->svtimebase = host_frametime + g_psv.time - (time_at_end + runcmd_time);
 }
 
 void SV_ParseMove(client_t *pSenderClient)
@@ -1771,6 +1792,12 @@ void EXT_FUNC SV_HandleClientMessage_api(IGameClient* client, uint8 opcode) {
 		return;
 	}
 
+#ifdef REHLDS_FIXES
+	// Save current name of the client before a possible kick
+	char name[32];
+	Q_strlcpy(name, host_client->name);
+#endif
+
 	void(*func)(client_t *) = sv_clcfuncs[opcode].pfnParse;
 	if (func)
 		func(cl);
@@ -1778,7 +1805,7 @@ void EXT_FUNC SV_HandleClientMessage_api(IGameClient* client, uint8 opcode) {
 #ifdef REHLDS_FIXES
 	if (msg_badread)
 	{
-		Con_Printf("SV_ReadClientMessage: badread on %s, opcode %s\n", host_client->name, sv_clcfuncs[opcode].pszname);
+		Con_Printf("SV_ReadClientMessage: badread on %s, opcode %s\n", name, sv_clcfuncs[opcode].pszname);
 	}
 #endif
 

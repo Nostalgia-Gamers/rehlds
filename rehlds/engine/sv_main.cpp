@@ -212,6 +212,7 @@ cvar_t sv_rehlds_local_gametime = {"sv_rehlds_local_gametime", "0", 0, 0.0f, nul
 cvar_t sv_rehlds_send_mapcycle = { "sv_rehlds_send_mapcycle", "0", 0, 0.0f, nullptr };
 cvar_t sv_rehlds_maxclients_from_single_ip = { "sv_rehlds_maxclients_from_single_ip", "5", 0, 5.0f, nullptr };
 cvar_t sv_use_entity_file = { "sv_use_entity_file", "0", 0, 0.0f, nullptr };
+cvar_t sv_usercmd_custom_random_seed = { "sv_usercmd_custom_random_seed", "0", 0, 0.0f, nullptr };
 #endif
 
 delta_t *SV_LookupDelta(char *name)
@@ -1500,7 +1501,7 @@ void SV_New_f(void)
 		return;
 	}
 
-	if (!host_client->active && host_client->spawned)
+	if ((host_client->hasusrmsgs && host_client->m_bSentNewResponse) || (!host_client->active && host_client->spawned))
 	{
 		return;
 	}
@@ -1539,8 +1540,8 @@ void SV_New_f(void)
 		gEntityInterface.pfnClientDisconnect(ent);
 	}
 
-	Q_snprintf(szName, sizeof(szName), host_client->name);
-	Q_snprintf(szAddress, sizeof(szAddress), NET_AdrToString(host_client->netchan.remote_address));
+	Q_snprintf(szName, sizeof(szName), "%s", host_client->name);
+	Q_snprintf(szAddress, sizeof(szAddress), "%s", NET_AdrToString(host_client->netchan.remote_address));
 	Q_snprintf(szRejectReason, sizeof(szRejectReason), "Connection rejected by game\n");
 
 	// Allow the game dll to reject this client.
@@ -1566,6 +1567,7 @@ void SV_New_f(void)
 	}
 	Netchan_CreateFragments(TRUE, &host_client->netchan, &msg);
 	Netchan_FragSend(&host_client->netchan);
+	host_client->m_bSentNewResponse = TRUE;
 }
 
 void SV_SendRes_f(void)
@@ -1658,6 +1660,9 @@ void EXT_FUNC SV_Spawn_f_internal(void)
 	}
 	else
 	{
+#ifdef REHLDS_FIXES
+		host_client->m_bSentNewResponse = FALSE;
+#endif
 		SV_New_f();
 	}
 }
@@ -2489,6 +2494,7 @@ void EXT_FUNC SV_ConnectClient_internal(void)
 	host_client->fully_connected = FALSE;
 
 #ifdef REHLDS_FIXES
+	host_client->m_bSentNewResponse = FALSE;
 	g_GameClients[host_client - g_psvs.clients]->SetSpawnedOnce(false);
 #endif // REHLDS_FIXES
 
@@ -7382,6 +7388,8 @@ void SV_InactivateClients(void)
 			cl->connected = TRUE;
 			cl->spawned = FALSE;
 			cl->fully_connected = FALSE;
+			cl->hasusrmsgs = FALSE;
+			cl->m_bSentNewResponse = FALSE;
 
 			SZ_Clear(&cl->netchan.message);
 			SZ_Clear(&cl->datagram);
@@ -8031,6 +8039,7 @@ void SV_Init(void)
 	Cvar_RegisterVariable(&sv_rollspeed);
 	Cvar_RegisterVariable(&sv_rollangle);
 	Cvar_RegisterVariable(&sv_use_entity_file);
+	Cvar_RegisterVariable(&sv_usercmd_custom_random_seed);
 #endif
 
 	for (int i = 0; i < MAX_MODELS; i++)
