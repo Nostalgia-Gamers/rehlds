@@ -100,7 +100,6 @@ redirect_t sv_redirected;
 netadr_t sv_redirectto;
 
 GameType_e g_eGameType = GT_Unitialized;
-qboolean allow_cheats;
 
 char *gNullString = "";
 int SV_UPDATE_BACKUP = SINGLEPLAYER_BACKUP;
@@ -115,6 +114,7 @@ int giNextUserMsg = 64;
 cvar_t sv_lan = { "sv_lan", "0", 0, 0.0f, NULL };
 cvar_t sv_lan_rate = { "sv_lan_rate", "20000.0", 0, 0.0f, NULL };
 cvar_t sv_aim = { "sv_aim", "1", FCVAR_SERVER | FCVAR_ARCHIVE , 0.0f, NULL };
+cvar_t sv_allow_autoaim = { "sv_allow_autoaim", "1", FCVAR_SERVER | FCVAR_ARCHIVE, 0.0f, NULL };
 
 cvar_t sv_skycolor_r = { "sv_skycolor_r", "0", 0, 0.0f, NULL };
 cvar_t sv_skycolor_g = { "sv_skycolor_g", "0", 0, 0.0f, NULL };
@@ -129,6 +129,12 @@ cvar_t sv_wateraccelerate = { "sv_wateraccelerate", "10", FCVAR_SERVER, 0.0f, NU
 cvar_t sv_waterfriction = { "sv_waterfriction", "1", FCVAR_SERVER, 0.0f, NULL };
 cvar_t sv_zmax = { "sv_zmax", "4096", FCVAR_SPONLY, 0.0f, NULL };
 cvar_t sv_wateramp = { "sv_wateramp", "0", 0, 0.0f, NULL };
+
+void sv_cheats_hook_callback(cvar_t *cvar);
+void mapcyclefile_hook_callback(cvar_t *cvar);
+
+cvarhook_t sv_cheats_hook = { sv_cheats_hook_callback, NULL, NULL };
+cvarhook_t mapcyclefile_hook = { mapcyclefile_hook_callback, NULL, NULL };
 
 cvar_t sv_skyname = { "sv_skyname", "desert", 0, 0.0f, NULL };
 cvar_t mapcyclefile = { "mapcyclefile", "mapcycle.txt", 0, 0.0f, NULL };
@@ -683,22 +689,22 @@ qboolean SV_BuildSoundMsg(edict_t *entity, int channel, const char *sample, int 
 
 	if (volume < 0 || volume > 255)
 	{
-		Con_Printf("%s: volume = %i", __func__, volume);
+		Con_Printf("%s: volume = %i\n", __func__, volume);
 		volume = (volume < 0) ? 0 : 255;
 	}
 	if (attenuation < 0.0f || attenuation > 4.0f)
 	{
-		Con_Printf("%s: attenuation = %f", __func__, attenuation);
+		Con_Printf("%s: attenuation = %f\n", __func__, attenuation);
 		attenuation = (attenuation < 0.0f) ? 0.0f : 4.0f;
 	}
 	if (channel < 0 || channel > 7)
 	{
-		Con_Printf("%s: channel = %i", __func__, channel);
+		Con_Printf("%s: channel = %i\n", __func__, channel);
 		channel = (channel < 0) ? CHAN_AUTO : CHAN_NETWORKVOICE_BASE;
 	}
 	if (pitch < 0 || pitch > 255)
 	{
-		Con_Printf("%s: pitch = %i", __func__, pitch);
+		Con_Printf("%s: pitch = %i\n", __func__, pitch);
 		pitch = (pitch < 0) ? 0 : 255;
 	}
 
@@ -710,7 +716,7 @@ qboolean SV_BuildSoundMsg(edict_t *entity, int channel, const char *sample, int 
 		sound_num = Q_atoi(sample + 1);
 		if (sound_num >= CVOXFILESENTENCEMAX)
 		{
-			Con_Printf("%s: invalid sentence number: %s", __func__, sample + 1);
+			Con_Printf("%s: invalid sentence number: %s\n", __func__, sample + 1);
 			return FALSE;
 		}
 	}
@@ -1115,8 +1121,18 @@ void SV_SendServerinfo_internal(sizebuf_t *msg, client_t *client)
 	else
 		MSG_WriteByte(msg, 0);
 
-	COM_FileBase(com_gamedir, message);
-	MSG_WriteString(msg, message);
+	const char *pszGameDir = message;
+
+#ifdef REHLDS_FIXES
+	// Give the client a chance to connect in to the server with different game
+	const char *gd = Info_ValueForKey(client->userinfo, "_gd");
+	if (gd[0])
+		pszGameDir = gd;
+	else
+#endif
+		COM_FileBase(com_gamedir, message);
+
+	MSG_WriteString(msg, pszGameDir);
 	MSG_WriteString(msg, Cvar_VariableString("hostname"));
 	MSG_WriteString(msg, g_psv.modelname);
 
@@ -1166,7 +1182,7 @@ void SV_SendServerinfo_internal(sizebuf_t *msg, client_t *client)
 
 	MSG_WriteByte(msg, svc_sendextrainfo);
 	MSG_WriteString(msg, com_clientfallback);
-	MSG_WriteByte(msg, allow_cheats);
+	MSG_WriteByte(msg, sv_cheats.value != 0);
 
 	SV_WriteDeltaDescriptionsToClient(msg);
 	SV_SetMoveVars();
@@ -2118,6 +2134,11 @@ void SV_ReplaceSpecialCharactersInName(char *newname, const char *oldname)
 #endif
 
 int SV_CheckUserInfo(netadr_t *adr, char *userinfo, qboolean bIsReconnecting, int nReconnectSlot, char *name)
+{
+	return g_RehldsHookchains.m_SV_CheckUserInfo.callChain(SV_CheckUserInfo_internal, adr, userinfo, bIsReconnecting, nReconnectSlot, name);
+}
+
+int EXT_FUNC SV_CheckUserInfo_internal(netadr_t *adr, char *userinfo, qboolean bIsReconnecting, int nReconnectSlot, char *name)
 {
 	const char *s;
 	char newname[MAX_NAME];
@@ -4037,9 +4058,10 @@ void SV_EmitEvents_internal(client_t *cl, packet_entities_t *pack, sizebuf_t *ms
 }
 
 int fatbytes;
-unsigned char fatpvs[1024];
+unsigned char fatpvs[MAX_MAP_LEAFS / 8];
+
 int fatpasbytes;
-unsigned char fatpas[1024];
+unsigned char fatpas[MAX_MAP_LEAFS / 8];
 
 void SV_AddToFatPVS(vec_t *org, mnode_t *node)
 {
@@ -4080,6 +4102,9 @@ unsigned char* EXT_FUNC SV_FatPVS(float *org)
 	else
 #endif // REHLDS_FIXES
 		fatbytes = (g_psv.worldmodel->numleafs + 31) >> 3;
+
+	if (fatbytes >= (MAX_MAP_LEAFS / 8))
+		Sys_Error("%s: MAX_MAP_LEAFS limit exceeded\n", __func__);
 
 	Q_memset(fatpvs, 0, fatbytes);
 	SV_AddToFatPVS(org, g_psv.worldmodel->nodes);
@@ -4137,6 +4162,9 @@ unsigned char* EXT_FUNC SV_FatPAS(float *org)
 	else
 #endif // REHLDS_FIXES
 		fatpasbytes = (g_psv.worldmodel->numleafs + 31) >> 3;
+
+	if (fatpasbytes >= (MAX_MAP_LEAFS / 8))
+		Sys_Error("%s: MAX_MAP_LEAFS limit exceeded\n", __func__);
 
 	Q_memset(fatpas, 0, fatpasbytes);
 	SV_AddToFatPAS(org, g_psv.worldmodel->nodes);
@@ -5132,7 +5160,17 @@ int SV_ModelIndex(const char *name)
 	Sys_Error("%s: SV_ModelIndex: model %s not precached", __func__, name);
 }
 
+void EXT_FUNC SV_AddResource_hook(resourcetype_t type, const char *name, int size, unsigned char flags, int index)
+{
+	SV_AddResource_internal(type, name, size, flags, index);
+}
+
 void EXT_FUNC SV_AddResource(resourcetype_t type, const char *name, int size, unsigned char flags, int index)
+{
+	g_RehldsHookchains.m_SV_AddResource.callChain(SV_AddResource_hook, type, name, size, flags, index);
+}
+
+void SV_AddResource_internal(resourcetype_t type, const char *name, int size, unsigned char flags, int index)
 {
 	resource_t *r;
 #ifdef REHLDS_FIXES
@@ -6152,7 +6190,7 @@ int SV_SpawnServer(qboolean bIsDemo, char *server, char *startspot)
 	if (g_psvs.maxclients <= 1)
 	{
 		int row = (g_psv.worldmodel->numleafs + 7) / 8;
-		if (row < 0 || row > MODEL_MAX_PVS)
+		if (row < 0 || row > (MAX_MAP_LEAFS / 8))
 		{
 			Sys_Error("%s: oversized g_psv.worldmodel->numleafs: %i", __func__, g_psv.worldmodel->numleafs);
 		}
@@ -6237,7 +6275,6 @@ int SV_SpawnServer(qboolean bIsDemo, char *server, char *startspot)
 	gGlobalVariables.serverflags = g_psvs.serverflags;
 	gGlobalVariables.mapname = (size_t)g_psv.name - (size_t)pr_strings;
 	gGlobalVariables.startspot = (size_t)g_psv.startspot - (size_t)pr_strings;
-	allow_cheats = sv_cheats.value;
 	SV_SetMoveVars();
 
 	return 1;
@@ -6554,6 +6591,42 @@ USERID_t *SV_StringToUserID(const char *str)
 void EXT_FUNC SV_SerializeSteamid(USERID_t* id, USERID_t* serialized)
 {
 	*serialized = *id;
+}
+
+void sv_cheats_hook_callback(cvar_t *cvar)
+{
+	int i;
+	client_t *client = NULL;
+
+	if (!Host_IsServerActive())
+		return;
+
+	for (i = 0; i < g_psvs.maxclients; i++)
+	{
+		client = &g_psvs.clients[i];
+
+		if (!client->fakeclient && (client->active || client->spawned || client->connected))
+		{
+			MSG_WriteByte(&client->netchan.message, svc_sendextrainfo);
+			MSG_WriteString(&client->netchan.message, "");
+			MSG_WriteByte(&client->netchan.message, sv_cheats.value != 0);
+		}
+	}
+}
+
+void mapcyclefile_hook_callback(cvar_t *cvar)
+{
+	char buf[MAX_PATH + 4];
+
+	if (!Q_strcmp(COM_FileExtension(cvar->string), "txt"))
+		return;
+
+	Q_snprintf(buf, sizeof(buf) - 3, "%s.txt", cvar->string);
+
+	if (!Q_strcmp(COM_FileExtension(buf), "txt"))
+		Cvar_DirectSet(cvar, buf);
+	else
+		Cvar_DirectSet(cvar, "mapcycle.txt");
 }
 
 void SV_BanId_f(void)
@@ -7964,6 +8037,9 @@ void SV_Init(void)
 	Cvar_RegisterVariable(&sv_visiblemaxplayers);
 	Cvar_RegisterVariable(&sv_password);
 	Cvar_RegisterVariable(&sv_aim);
+#ifdef REHLDS_FIXES
+	Cvar_RegisterVariable(&sv_allow_autoaim);
+#endif
 	Cvar_RegisterVariable(&violence_hblood);
 	Cvar_RegisterVariable(&violence_ablood);
 	Cvar_RegisterVariable(&violence_hgibs);
@@ -7994,6 +8070,7 @@ void SV_Init(void)
 	Cvar_RegisterVariable(&sv_skyname);
 	Cvar_RegisterVariable(&sv_maxvelocity);
 	Cvar_RegisterVariable(&sv_cheats);
+	Cvar_HookVariable(sv_cheats.name, &sv_cheats_hook);
 	if (COM_CheckParm("-dev"))
 		Cvar_SetValue("sv_cheats", 1.0);
 	Cvar_RegisterVariable(&sv_spectatormaxspeed);
@@ -8005,6 +8082,7 @@ void SV_Init(void)
 	Cvar_RegisterVariable(&sv_logbans);
 	Cvar_RegisterVariable(&hpk_maxsize);
 	Cvar_RegisterVariable(&mapcyclefile);
+	Cvar_HookVariable(mapcyclefile.name, &mapcyclefile_hook);
 	Cvar_RegisterVariable(&motdfile);
 	Cvar_RegisterVariable(&servercfgfile);
 	Cvar_RegisterVariable(&mapchangecfgfile);

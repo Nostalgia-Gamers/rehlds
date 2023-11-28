@@ -52,7 +52,9 @@ char* EXT_FUNC GetClientFallback_api() {
 }
 
 int* EXT_FUNC GetAllowCheats_api() {
-	return &allow_cheats;
+	static int sv_cheats_stub = 0;
+	Con_Printf("WARNING! allow_cheats marked as deprecated! Use sv_cheats cvar directly!\n");
+	return &sv_cheats_stub;
 }
 
 bool EXT_FUNC GSBSecure_api() {
@@ -849,6 +851,38 @@ IRehldsHookRegistry_ED_Free* CRehldsHookchains::ED_Free() {
 
 IRehldsHookRegistry_Con_Printf* CRehldsHookchains::Con_Printf() {
 	return &m_Con_Printf;
+}
+
+IRehldsHookRegistry_SV_CheckUserInfo* CRehldsHookchains::SV_CheckUserInfo() {
+	return &m_SV_CheckUserInfo;
+}
+
+IRehldsHookRegistry_PF_precache_generic_I* CRehldsHookchains::PF_precache_generic_I() {
+	return &m_PF_precache_generic_I;
+}
+
+IRehldsHookRegistry_PF_precache_model_I* CRehldsHookchains::PF_precache_model_I() {
+	return &m_PF_precache_model_I;
+}
+
+IRehldsHookRegistry_PF_precache_sound_I* CRehldsHookchains::PF_precache_sound_I() {
+	return &m_PF_precache_sound_I;
+}
+
+IRehldsHookRegistry_EV_Precache* CRehldsHookchains::EV_Precache() {
+	return &m_EV_Precache;
+}
+
+IRehldsHookRegistry_SV_AddResource* CRehldsHookchains::SV_AddResource(){
+	return &m_SV_AddResource;
+}
+
+IRehldsHookRegistry_SV_ClientPrintf* CRehldsHookchains::SV_ClientPrintf(){
+	return &m_SV_ClientPrintf;
+}
+
+IRehldsHookRegistry_SV_AllowPhysent* CRehldsHookchains::SV_AllowPhysent() {
+	return &m_SV_AllowPhysent;
 }
 
 int EXT_FUNC CRehldsApi::GetMajorVersion()

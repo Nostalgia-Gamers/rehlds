@@ -283,6 +283,7 @@ extern rehlds_server_t g_rehlds_sv;
 extern cvar_t sv_lan;
 extern cvar_t sv_lan_rate;
 extern cvar_t sv_aim;
+extern cvar_t sv_allow_autoaim;
 
 extern cvar_t sv_skycolor_r;
 extern cvar_t sv_skycolor_g;
@@ -349,7 +350,6 @@ extern cvar_t sv_proxies;
 extern cvar_t sv_outofdatetime;
 extern cvar_t mapchangecfgfile;
 
-extern qboolean allow_cheats;
 extern cvar_t mp_logecho;
 extern cvar_t mp_logfile;
 extern cvar_t sv_allow_download;
@@ -405,7 +405,6 @@ enum GameType_e
 
 extern GameType_e g_eGameType;
 
-extern int fatbytes;
 extern int giNextUserMsg;
 extern int hashstrings_collisions;
 
@@ -417,10 +416,6 @@ extern delta_t *g_pweapondelta;
 #ifdef REHLDS_OPT_PEDANTIC
 extern delta_t *g_pusercmddelta;
 #endif
-
-extern unsigned char fatpvs[1024];
-extern int fatpasbytes;
-extern unsigned char fatpas[1024];
 
 extern int gPacketSuppressed;
 
@@ -498,6 +493,7 @@ int SV_CheckKeyInfo_internal(netadr_t *adr, char *protinfo, unsigned short *port
 int SV_CheckForDuplicateSteamID(client_t *client);
 qboolean SV_CheckForDuplicateNames(char *userinfo, qboolean bIsReconnecting, int nExcludeSlot);
 int SV_CheckUserInfo(netadr_t *adr, char *userinfo, qboolean bIsReconnecting, int nReconnectSlot, char *name);
+int SV_CheckUserInfo_internal(netadr_t *adr, char *userinfo, qboolean bIsReconnecting, int nReconnectSlot, char *name);
 int SV_FindEmptySlot(netadr_t *adr, int *pslot, client_t ** ppClient);
 void SV_ConnectClient(void);
 void SV_ConnectClient_internal(void);
@@ -569,6 +565,7 @@ void SV_SendClientMessages(void);
 void SV_ExtractFromUserinfo(client_t *cl);
 int SV_ModelIndex(const char *name);
 void SV_AddResource(resourcetype_t type, const char *name, int size, unsigned char flags, int index);
+void SV_AddResource_internal(resourcetype_t type, const char *name, int size, unsigned char flags, int index);
 size_t SV_CountResourceByType(resourcetype_t type, resource_t **pResourceList = nullptr, size_t nListMax = 0, size_t *nWidthFileNameMax = nullptr);
 void SV_CreateGenericResources(void);
 void SV_CreateResourceList(void);
