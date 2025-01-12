@@ -175,6 +175,7 @@ jobs:
             g++ gcc
 
       - name: GPG Import
+        if: false # Skip signature
         run: |
           echo "${{ secrets.PUB_ASC }}" > "${{ secrets.PUB_ASC_FILE }}"
           echo "${{ secrets.KEY_ASC }}" > "${{ secrets.KEY_ASC_FILE }}"
