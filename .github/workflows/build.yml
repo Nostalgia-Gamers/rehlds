@@ -90,6 +90,7 @@ jobs:
         shell: "pwsh"
 
       - name: Import PFX and sign
+        if: false # Disable signature
         env:
           KEY_PFX_PASS: ${{ secrets.KEY_PFX_PASS}}
         run: |
