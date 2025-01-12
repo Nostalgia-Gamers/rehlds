@@ -53,6 +53,7 @@ const int MAX_NAME   = 32;
 #include "pm_defs.h"
 #include "inst_baseline.h"
 #include "net_ws.h"
+#include "pm_shared/pm_movevars.h"
 
 const int DEFAULT_SOUND_PACKET_VOLUME			= 255;
 const float DEFAULT_SOUND_PACKET_ATTENUATION	= 1.0f;
@@ -94,13 +95,6 @@ typedef enum redirect_e
 	RD_CLIENT = 1,
 	RD_PACKET = 2,
 } redirect_t;
-
-typedef enum server_state_e
-{
-	ss_dead = 0,
-	ss_loading = 1,
-	ss_active = 2,
-} server_state_t;
 
 typedef struct server_s
 {
@@ -242,6 +236,7 @@ typedef struct client_s
 	double m_lastvoicetime;
 	int m_sendrescount;
 	qboolean m_bSentNewResponse;
+	movevars_t movevars;
 } client_t;
 
 enum
@@ -461,13 +456,13 @@ void SV_BuildHashedSoundLookupTable(void);
 void SV_AddSampleToHashedLookupTable(const char *pszSample, int iSampleIndex);
 qboolean SV_ValidClientMulticast(client_t *client, int soundLeaf, int to);
 void SV_Multicast(edict_t *ent, vec_t *origin, int to, qboolean reliable);
-void SV_WriteMovevarsToClient(sizebuf_t *message);
+void SV_WriteMovevarsToClient(sizebuf_t *message, struct movevars_s *movevars);
 void SV_WriteDeltaDescriptionsToClient(sizebuf_t *msg);
-void SV_SetMoveVars(void);
-void SV_QueryMovevarsChanged(void);
+void SV_SetMoveVars(struct movevars_s *movevars);
 void SV_SendServerinfo(sizebuf_t *msg, client_t *client);
 void SV_SendServerinfo_internal(sizebuf_t *msg, client_t *client);
 void SV_SendResources(sizebuf_t *msg);
+void SV_SendResources_internal(sizebuf_t *msg);
 void SV_WriteClientdataToMessage(client_t *client, sizebuf_t *msg);
 void SV_WriteSpawn(sizebuf_t *msg);
 void SV_SendUserReg(sizebuf_t *msg);

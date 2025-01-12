@@ -1,4 +1,4 @@
-# ReHLDS [![C/C++ CI](https://github.com/dreamstalker/rehlds/actions/workflows/build.yml/badge.svg)](https://github.com/dreamstalker/rehlds/actions/workflows/build.yml) [![Download](https://camo.githubusercontent.com/7ab483250adb4037b26e9575331218ee51108190d0938b7836d32f1209ccf907/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f72656c656173652f647265616d7374616c6b65722f7265686c64732e737667)](https://github.com/dreamstalker/rehlds/releases/latest) [![Downloads](https://camo.githubusercontent.com/d37654956d99bb9fb7a348fdac39b214d6ae14a7cfb9f96bf873c6b46cdf9ef6/68747470733a2f2f696d672e736869656c64732e696f2f6769746875622f646f776e6c6f6164732f647265616d7374616c6b65722f7265686c64732f746f74616c3f636f6c6f723d696d706f7274616e74)]() [![Percentage of issues still open](http://isitmaintained.com/badge/open/dreamstalker/rehlds.svg)](http://isitmaintained.com/project/dreamstalker/rehlds "Percentage of issues still open") [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) <img align="right" src="https://user-images.githubusercontent.com/5860435/111066129-040e5e00-84f0-11eb-9e1f-7a7e8611da2b.png" alt="ReHLDS" />
+# ReHLDS [![C/C++ CI](https://github.com/rehlds/ReHLDS/actions/workflows/build.yml/badge.svg)](https://github.com/rehlds/ReHLDS/actions/workflows/build.yml) [![GitHub release (by tag)](https://img.shields.io/github/downloads/rehlds/ReHLDS/latest/total)](https://github.com/rehlds/ReHLDS/releases/latest) ![GitHub all releases](https://img.shields.io/github/downloads/rehlds/ReHLDS/total) [![Percentage of issues still open](http://isitmaintained.com/badge/open/rehlds/ReHLDS.svg)](http://isitmaintained.com/project/rehlds/ReHLDS "Percentage of issues still open") [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) <img align="right" src="https://user-images.githubusercontent.com/5860435/111066129-040e5e00-84f0-11eb-9e1f-7a7e8611da2b.png" alt="ReHLDS" />
 Reverse-engineered (and bugfixed) HLDS
 
 ## What is this?
@@ -8,6 +8,15 @@ Along with reverse engineering, a lot of defects and (potential) bugs were found
 
 You can try playing on one of many servers that are using ReHLDS: [Game Tracker](http://www.gametracker.com/search/?search_by=server_variable&search_by2=sv_version)
 
+> [!TIP]
+> ReHLDS linux-releases now is signed via `GPG`, pubkey is: `63547829004f07716f7be4856c32c4282e60fb67` and could be found at [https://keyserver.ubuntu.com/](https://keyserver.ubuntu.com/pks/lookup?search=63547829004f07716f7be4856c32c4282e60fb67+&fingerprint=on&op=index).
+>
+> How to:
+> 1. [Download](https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x63547829004f07716f7be4856c32c4282e60fb67) `63547829004f07716f7be4856c32c4282e60fb67.asc` key
+> 2. Import: `gpg --import 63547829004f07716f7be4856c32c4282e60fb67.asc`
+> 3. Download release `archive` and `.asc` file.
+> 4. Verify: `gpg --verify some-rehlds.zip.asc some-rehlds.zip`.
+
 ## Goals of the project
 <ul>
 <li>Provide more stable (than official) version of Half-Life dedicated server with extended API for mods and plugins</li>
@@ -15,9 +24,10 @@ You can try playing on one of many servers that are using ReHLDS: [Game Tracker]
 </ul>
 
 ## How can use it?
-ReHLDS is fully compatible with the official pre-anniversary edition of HLDS (engine version <= 8684) downloaded by steamcmd. All you have to do is to download rehlds binaries and replace original swds.dll/engine_i486.so. For windows you can also copy a swds.pdb file with a debug information.
+ReHLDS is fully compatible with the official pre-anniversary edition of HLDS (engine version <= 8684) downloaded by steamcmd. All you have to do is to download ReHLDS binaries and replace original swds.dll/engine_i486.so. For windows you can also copy a swds.pdb file with a debug information.
 
-<b>Warning!</b> ReHLDS is not compatible with an old 5xxx or below platforms downloaded by hldsupdatetool.
+> [!CAUTION]  
+> ReHLDS is not compatible with an old 5xxx or below platforms downloaded by hldsupdatetool.
 
 #### Downloading HLDS via steamcmd
 
@@ -27,13 +37,13 @@ app_update 90 -beta steam_legacy validate
 ```
 
 ## Downloads
-* [Release builds](https://github.com/dreamstalker/rehlds/releases)
-* [Dev builds](https://github.com/dreamstalker/rehlds/actions/workflows/build.yml)
+* [Release builds](https://github.com/rehlds/ReHLDS/releases)
+* [Dev builds](https://github.com/rehlds/ReHLDS/actions/workflows/build.yml)
 
 ReHLDS binaries require `SSE`, `SSE2` and `SSE3` instruction sets to run and can benefit from `SSE4.1` and `SSE4.2`
 
 <b>Warning!</b> ReHLDS is not binary compatible with original hlds since it's compiled with compilers other than ones used for original hlds.
-This means that plugins that do binary code analysis (Orpheu for example) probably will not work with rehlds.
+This means that plugins that do binary code analysis (Orpheu for example) probably will not work with ReHLDS.
 
 ## Configuring
 <details>
@@ -57,14 +67,22 @@ This means that plugins that do binary code analysis (Orpheu for example) probab
 <li>sv_rehlds_stringcmdrate_avg_punish // Time in minutes for which the player will be banned (0 - Permanent, use a negative number for a kick). Default: 5
 <li>sv_rehlds_stringcmdrate_max_burst // Max burst level of 'string' cmds for ban. Default: 400
 <li>sv_rehlds_stringcmdrate_burst_punish // Time in minutes for which the player will be banned (0 - Permanent, use a negative number for a kick). Default: 5
-<li>sv_rehlds_userinfo_transmitted_fields // Userinfo fields only with these keys will be transmitted to clients via network. If not set then all fields will be transmitted (except prefixed with underscore). Each key must be prefixed by backslash, for example "\name\model\*sid\*hltv\bottomcolor\topcolor". See [wiki](https://github.com/dreamstalker/rehlds/wiki/Userinfo-keys) to collect sufficient set of keys for your server. Default: ""
+<li>sv_rehlds_userinfo_transmitted_fields // Userinfo fields only with these keys will be transmitted to clients via network. If not set then all fields will be transmitted (except prefixed with underscore). Each key must be prefixed by backslash, for example "\name\model\*sid\*hltv\bottomcolor\topcolor". See [wiki](https://github.com/rehlds/ReHLDS/wiki/Userinfo-keys) to collect sufficient set of keys for your server. Default: ""
 <li>sv_rehlds_attachedentities_playeranimationspeed_fix // Fixes bug with gait animation speed increase when player has some attached entities (aiments). Can cause animation lags when cl_updaterate is low. Default: 0
 <li>sv_rehlds_maxclients_from_single_ip // Limit number of connections at the same time from single IP address, not confuse to already connected players. Default: 5
 <li>sv_rehlds_local_gametime &lt;1|0&gt; // A feature of local gametime which decrease "lags" if you run same map for a long time. Default: 0
 <li>sv_use_entity_file // Use custom entity file for a map. Path to an entity file will be "maps/[map name].ent". 0 - use original entities. 1 - use .ent files from maps directory. 2 - use .ent files from maps directory and create new .ent file if not exist.
 <li>sv_rcon_allowexternal <1|0> // Usage of Rcon from externals IPs. Default: 1
 <li>sv_usercmd_custom_random_seed // When enabled server will populate an additional random seed independent of the client. Default: 0
+<li>sv_net_incoming_decompression &lt;1|0&gt; // When enabled server will decompress of incoming compressed file transfer payloads. Default: 1
+<li>sv_net_incoming_decompression_max_ratio &lt;0|100&gt; // Sets the max allowed ratio between compressed and uncompressed data for file transfer. (A ratio close to 90 indicates large uncompressed data with low entropy) Default: 80.0
+<li>sv_net_incoming_decompression_max_size &lt;16|65536&gt; // Sets the max allowed size for decompressed file transfer data. Default: 65536 bytes
+<li>sv_net_incoming_decompression_min_failures &lt;0|10&gt; // Sets the min number of decompression failures required before a player's connection is flagged for potential punishment. Default: 4
+<li>sv_net_incoming_decompression_max_failures &lt;0|10&gt; // Sets the max number of decompression failures allowed within a specified time window before action is taken against the player. Default: 10
+<li>sv_net_incoming_decompression_min_failuretime: &lt;0.1|10.0&gt; // Sets the min time in secs within which decompression failures are tracked to determine if the player exceeds the failure thresholds. Default: 0.1
+<li>sv_net_incoming_decompression_punish // Time in minutes for which the player will be banned for malformed/abnormal bzip2 fragments (0 - Permanent, use a negative number for a kick). Default: -1
 <li>sv_tags &lt;comma-delimited string list of tags&gt; // Sets a string defining the "gametags" for this server, this is optional, but if it is set it allows users/scripts to filter in the matchmaking/server-browser interfaces based on the value. Default: ""
+<li>sv_filterban &lt;-1|0|1&gt;// Set packet filtering by IP mode. -1 - All players will be rejected without any exceptions. 0 - No checks will happen. 1 - All incoming players will be checked if they're IP banned (if they have an IP filter entry), if they are, they will be kicked. Default: 1
 </ul>
 </details>
 
@@ -79,7 +97,7 @@ This means that plugins that do binary code analysis (Orpheu for example) probab
 
 ## Build instructions
 ### Checking requirements
-There are several software requirements for building rehlds:
+There are several software requirements for building ReHLDS:
 
 #### Windows
 <pre>
