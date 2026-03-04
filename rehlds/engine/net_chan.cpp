@@ -1499,12 +1499,20 @@ qboolean Netchan_ValidateDecompress(netchan_t *chan, int stream, unsigned int co
 		if (chan->player_slot == 0)
 			Con_DPrintf("Incoming abnormal uncompressed size with ratio %.2f\n", ratio);
 		else
-			Con_DPrintf("%s:Incoming abnormal uncompressed size with ratio %.2f from %s\n", NET_AdrToString(chan->remote_address), ratio, host_client->name);
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_DPrintf("%s:Incoming abnormal uncompressed size with ratio %.2f from %s\n", adrbuf, ratio, host_client->name);
+		}
 
 		if (sv_net_incoming_decompression_punish.value >= 0)
 		{
-			Con_DPrintf("%s:Banned for malformed/abnormal bzip2 fragments from %s\n", NET_AdrToString(chan->remote_address), host_client->name);
-			Cbuf_AddText(va("addip %.1f %s\n", sv_net_incoming_decompression_punish.value, NET_BaseAdrToString(chan->remote_address)));
+			netadr_t logicadr;
+			SV_GetClientLogicAdr(host_client, &logicadr);
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_DPrintf("%s:Banned for malformed/abnormal bzip2 fragments from %s\n", adrbuf, host_client->name);
+			Cbuf_AddText(va("addip %.1f %s\n", sv_net_incoming_decompression_punish.value, NET_BaseAdrToString(logicadr)));
 		}
 
 		return FALSE;
@@ -1588,7 +1596,9 @@ qboolean Netchan_CopyNormalFragments(netchan_t *chan)
 			// compressed data is expected only after requesting resource list
 			else if (host_client->m_sendrescount == 0)
 			{
-				Con_DPrintf("%s:Incoming compressed normal fragment disallowed from %s\n", NET_AdrToString(chan->remote_address), host_client->name);
+				char adrbuf[64];
+				SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+				Con_DPrintf("%s:Incoming compressed normal fragment disallowed from %s\n", adrbuf, host_client->name);
 				return FALSE;
 			}
 		}
@@ -1792,7 +1802,9 @@ qboolean Netchan_CopyFileFragments(netchan_t *chan)
 			// compressed data is expected only after requesting resource list
 			else if (host_client->m_sendrescount == 0)
 			{
-				Con_DPrintf("%s:Incoming compressed file fragment disallowed from %s\n", NET_AdrToString(chan->remote_address), host_client->name);
+				char adrbuf[64];
+				SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+				Con_DPrintf("%s:Incoming compressed file fragment disallowed from %s\n", adrbuf, host_client->name);
 				return FALSE;
 			}
 		}

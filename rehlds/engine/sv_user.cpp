@@ -97,7 +97,11 @@ void SV_ParseConsistencyResponse(client_t *pSenderClient)
 	if (value <= 0 || !SZ_HasSomethingToRead(&net_message, value))
 	{
 		msg_badread = TRUE;
-		Con_DPrintf("%s:  %s:%s invalid length: %d\n", __func__, host_client->name, NET_AdrToString(host_client->netchan.remote_address), value);
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_DPrintf("%s:  %s:%s invalid length: %d\n", __func__, host_client->name, adrbuf, value);
+		}
 		SV_DropClient(host_client, FALSE, "Invalid length");
 		return;
 	}
@@ -194,7 +198,11 @@ void SV_ParseConsistencyResponse(client_t *pSenderClient)
 	if (c < 0 || length != g_psv.num_consistency)
 	{
 		msg_badread = 1;
-		Con_Printf("SV_ParseConsistencyResponse:  %s:%s sent bad file data\n", host_client->name, NET_AdrToString(host_client->netchan.remote_address));
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_Printf("SV_ParseConsistencyResponse:  %s:%s sent bad file data\n", host_client->name, adrbuf);
+		}
 		SV_DropClient(host_client, FALSE, "Bad file data");
 		return;
 	}
@@ -1591,7 +1599,11 @@ void SV_ParseMove(client_t *pSenderClient)
 	if (mlen <= 0 || !SZ_HasSpaceToRead(&net_message, mlen))
 	{
 		msg_badread = TRUE;
-		Con_DPrintf("%s:  %s:%s invalid length: %d\n", __func__, host_client->name, NET_AdrToString(host_client->netchan.remote_address), mlen);
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_DPrintf("%s:  %s:%s invalid length: %d\n", __func__, host_client->name, adrbuf, mlen);
+		}
 		SV_DropClient(host_client, FALSE, "Invalid length");
 		return;
 	}
@@ -1608,7 +1620,11 @@ void SV_ParseMove(client_t *pSenderClient)
 	net_drop += 1 - numcmds;
 	if (totalcmds < 0 || totalcmds >= CMD_MAXBACKUP - 1)
 	{
-		Con_Printf("SV_ReadClientMessage: too many cmds %i sent for %s/%s\n", totalcmds, host_client->name, NET_AdrToString(host_client->netchan.remote_address));
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_Printf("SV_ReadClientMessage: too many cmds %i sent for %s/%s\n", totalcmds, host_client->name, adrbuf);
+		}
 		SV_DropClient(host_client, FALSE, "CMD_MAXBACKUP hit");
 		msg_badread = 1;
 		return;
@@ -1626,14 +1642,22 @@ void SV_ParseMove(client_t *pSenderClient)
 
 	if (msg_badread)
 	{
-		Con_Printf("Client %s:%s sent a bogus command packet\n", host_client->name, NET_AdrToString(host_client->netchan.remote_address));
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_Printf("Client %s:%s sent a bogus command packet\n", host_client->name, adrbuf);
+		}
 		return;
 	}
 
 	cbpktchecksum = COM_BlockSequenceCRCByte(&net_message.data[placeholder + 1], msg_readcount - placeholder - 1, host_client->netchan.incoming_sequence);
 	if (cbpktchecksum != cbchecksum)
 	{
-		Con_DPrintf("Failed command checksum for %s:%s\n", host_client->name, NET_AdrToString(host_client->netchan.remote_address));
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+			Con_DPrintf("Failed command checksum for %s:%s\n", host_client->name, adrbuf);
+		}
 		msg_badread = 1;
 		return;
 	}

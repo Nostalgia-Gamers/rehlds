@@ -157,8 +157,12 @@ void CServerRemoteAccess::GetPlayerList(CUtlBuffer &value)
 		if (!cli->active || Q_strlen(cli->name) < 1)
 			continue;
 
-		value.Printf("\"%s\" %s %s %d %d %d %d\n", cli->name, SV_GetIDString(&cli->network_userid), NET_AdrToString(cli->netchan.remote_address),
-			int(cli->latency * 1000.0), (int)cli->packet_loss, (int)cli->edict->v.frags, int(realtime - cli->netchan.connect_time));
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(cli, adrbuf, sizeof(adrbuf));
+			value.Printf("\"%s\" %s %s %d %d %d %d\n", cli->name, SV_GetIDString(&cli->network_userid), adrbuf,
+				int(cli->latency * 1000.0), (int)cli->packet_loss, (int)cli->edict->v.frags, int(realtime - cli->netchan.connect_time));
+		}
 
 	}
 

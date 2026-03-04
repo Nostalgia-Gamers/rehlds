@@ -192,6 +192,8 @@ typedef struct client_s
 	int delta_sequence;
 	qboolean fakeclient;
 	qboolean proxy;
+	netadr_t real_address;
+	qboolean has_realip;
 	usercmd_t lastcmd;
 	double connecttime;
 	double cmdtime;
@@ -620,6 +622,8 @@ qboolean SV_CompareUserID_internal(USERID_t *id1, USERID_t *id2);
 char *SV_GetIDString(USERID_t *id);
 char *SV_GetIDString_internal(USERID_t *id);
 char *SV_GetClientIDString(client_t *client);
+void SV_GetClientLogicAdr(const client_t *cl, netadr_t *out);
+void SV_GetClientLogicAdrString(const client_t *cl, char *buf, size_t bufSize);
 int GetGameAppID(void);
 qboolean IsGameSubscribed(const char *gameName);
 NOXREF qboolean BIsValveGame(void);

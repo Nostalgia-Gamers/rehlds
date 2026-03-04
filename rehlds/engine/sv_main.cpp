@@ -1567,7 +1567,7 @@ void SV_New_f(void)
 	}
 
 	Q_snprintf(szName, sizeof(szName), "%s", host_client->name);
-	Q_snprintf(szAddress, sizeof(szAddress), "%s", NET_AdrToString(host_client->netchan.remote_address));
+	SV_GetClientLogicAdrString(host_client, szAddress, sizeof(szAddress));
 	Q_snprintf(szRejectReason, sizeof(szRejectReason), "Connection rejected by game\n");
 
 	// Allow the game dll to reject this client.
@@ -2500,13 +2500,24 @@ void EXT_FUNC SV_ConnectClient_internal(void)
 	host_client->delta_sequence = -1;
 	Q_memset(&host_client->lastcmd, 0, sizeof(usercmd_t));
 	host_client->nextping = -1.0;
+#ifdef REHLDS_FIXES
+	Q_strncpy(host_client->userinfo, userinfo, MAX_INFO_STRING - 1);
+#else
+	Q_strncpy(host_client->userinfo, userinfo, MAX_INFO_STRING);
+#endif
+	host_client->userinfo[MAX_INFO_STRING - 1] = 0;
+	SV_ExtractFromUserinfo(host_client);
+	Info_SetValueForStarKey(host_client->userinfo, "*sid", va("%lld", host_client->network_userid.m_SteamID), MAX_INFO_STRING);
+
 	if (host_client->netchan.remote_address.type == NA_LOOPBACK)
 	{
 		Con_DPrintf("Local connection.\n");
 	}
 	else
 	{
-		Con_DPrintf("Client %s connected\nAdr: %s\n", name, NET_AdrToString(host_client->netchan.remote_address));
+		char adrbuf[64];
+		SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+		Con_DPrintf("Client %s connected\nAdr: %s\n", name, adrbuf);
 	}
 #ifndef REHLDS_OPT_PEDANTIC
 	Q_strncpy(host_client->hashedcdkey, cdkey, 32);
@@ -2530,22 +2541,19 @@ void EXT_FUNC SV_ConnectClient_internal(void)
 #endif // REHLDS_FIXES
 
 	bIsSecure = Steam_GSBSecure();
-	Netchan_OutOfBandPrint(NS_SERVER, adr, "%c %i \"%s\" %i %i", S2C_CONNECTION, host_client->userid, NET_AdrToString(host_client->netchan.remote_address), bIsSecure, build_number()
+	{
+		char adrbuf[64];
+		SV_GetClientLogicAdrString(host_client, adrbuf, sizeof(adrbuf));
+		Netchan_OutOfBandPrint(NS_SERVER, adr, "%c %i \"%s\" %i %i", S2C_CONNECTION, host_client->userid, adrbuf, bIsSecure, build_number()
 #ifdef REHLDS_FIXES
 		+ 5970 // Send a fake build number greater than 5970 because the client checks for an older server build into CL_Move
 #endif
 	);
+	}
 
-	Log_Printf("\"%s<%i><%s><>\" connected, address \"%s\"\n", name, host_client->userid, SV_GetClientIDString(host_client), NET_AdrToString(host_client->netchan.remote_address));
-#ifdef REHLDS_FIXES
-	Q_strncpy(host_client->userinfo, userinfo, MAX_INFO_STRING - 1);
-#else
-	Q_strncpy(host_client->userinfo, userinfo, MAX_INFO_STRING);
-#endif
-	host_client->userinfo[MAX_INFO_STRING - 1] = 0;
-
-	SV_ExtractFromUserinfo(host_client);
-	Info_SetValueForStarKey(host_client->userinfo, "*sid", va("%lld", host_client->network_userid.m_SteamID), MAX_INFO_STRING);
+	char logadrbuf[64];
+	SV_GetClientLogicAdrString(host_client, logadrbuf, sizeof(logadrbuf));
+	Log_Printf("\"%s<%i><%s><>\" connected, address \"%s\"\n", name, host_client->userid, SV_GetClientIDString(host_client), logadrbuf);
 
 	host_client->datagram.flags = SIZEBUF_ALLOW_OVERFLOW;
 	host_client->datagram.data = (byte *)host_client->datagram_buf;
@@ -3800,7 +3808,9 @@ void SV_ProcessFile(client_t *cl, char *filename)
 
 	if (!sv_allow_upload.value)
 	{
-		Con_NetPrintf("Ignoring incoming customization file upload of %s from %s\n", filename, NET_AdrToString(cl->netchan.remote_address));
+		char adrbuf[64];
+		SV_GetClientLogicAdrString(cl, adrbuf, sizeof(adrbuf));
+		Con_NetPrintf("Ignoring incoming customization file upload of %s from %s\n", filename, adrbuf);
 		return;
 	}
 
@@ -5377,6 +5387,19 @@ void SV_ExtractFromUserinfo(client_t *cl)
 
 	val = Info_ValueForKey(userinfo, "*hltv");
 	cl->proxy = val[0] != '\0' ? Q_atoi(val) == TYPE_PROXY : 0;
+
+	val = Info_ValueForKey(userinfo, "realip");
+	cl->has_realip = FALSE;
+	if (val[0] != '\0')
+	{
+		netadr_t parsed;
+		if (NET_StringToAdr(val, &parsed) && parsed.type == NA_IP)
+		{
+			Q_memcpy(&cl->real_address, &parsed, sizeof(netadr_t));
+			cl->real_address.port = 0;
+			cl->has_realip = TRUE;
+		}
+	}
 
 	SV_CheckUpdateRate(&cl->next_messageinterval);
 	SV_CheckRate(cl);
@@ -8539,6 +8562,29 @@ char *SV_GetClientIDString(client_t *client)
 	}
 
 	return idstr;
+}
+
+void SV_GetClientLogicAdr(const client_t *cl, netadr_t *out)
+{
+	if (!cl || !out)
+		return;
+	if (cl->has_realip)
+	{
+		Q_memcpy(out, &cl->real_address, sizeof(netadr_t));
+		out->port = cl->netchan.remote_address.port;
+	}
+	else
+		Q_memcpy(out, &cl->netchan.remote_address, sizeof(netadr_t));
+}
+
+void SV_GetClientLogicAdrString(const client_t *cl, char *buf, size_t bufSize)
+{
+	if (!cl || !buf || bufSize == 0)
+		return;
+	netadr_t adr;
+	SV_GetClientLogicAdr(cl, &adr);
+	Q_strncpy(buf, NET_AdrToString(adr), bufSize - 1);
+	buf[bufSize - 1] = '\0';
 }
 
 typedef struct GameToAppIDMapItem_s

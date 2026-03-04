@@ -658,9 +658,18 @@ void Host_Status_f(void)
 		else Host_Status_Printf(conprint, log, " %02i:%02i", minutes, seconds);
 
 		Host_Status_Printf(conprint, log, " %4i  %3i", SV_CalcPing(client), (int)client->packet_loss);
-		if ((conprint || client->proxy) && client->netchan.remote_address.type == NA_IP)
+		if (conprint || client->proxy)
 		{
-			Host_Status_Printf(conprint, log, " %s\n", NET_AdrToString(client->netchan.remote_address));
+			netadr_t logicadr;
+			SV_GetClientLogicAdr(client, &logicadr);
+			if (logicadr.type == NA_IP)
+			{
+				char adrbuf[64];
+				SV_GetClientLogicAdrString(client, adrbuf, sizeof(adrbuf));
+				Host_Status_Printf(conprint, log, " %s\n", adrbuf);
+			}
+			else
+				Host_Status_Printf(conprint, log, "\n");
 		}
 		else Host_Status_Printf(conprint, log, "\n");
 	}
@@ -742,7 +751,11 @@ void Host_Status_Formatted_f(void)
 			Q_snprintf(sz, sizeof(sz), "%02i:%02i", minutes, seconds % 60);
 
 		if (conprint)
-			szRemoteAddr = NET_AdrToString(client->netchan.remote_address);
+		{
+			char adrbuf[64];
+			SV_GetClientLogicAdrString(client, adrbuf, sizeof(adrbuf));
+			szRemoteAddr = adrbuf;
+		}
 		else szRemoteAddr = "";
 
 #ifdef REHLDS_FIXES
