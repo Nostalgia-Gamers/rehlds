@@ -2504,6 +2504,24 @@ void EXT_FUNC SV_ConnectClient_internal(void)
 	Q_strncpy(host_client->hashedcdkey, cdkey, 32);
 	host_client->hashedcdkey[32] = '\0';
 #else
+	// Read real IP from userinfo if provided by proxy (before MD5 calculation)
+	const char *realip_str = Info_ValueForKey(userinfo, "realip");
+	if (realip_str[0] != '\0')
+	{
+		netadr_t realip_adr;
+		if (NET_StringToAdr(realip_str, &realip_adr))
+		{
+			// Use the real IP from the proxy
+			host_client->network_userid.clientip = *(uint32 *)&realip_adr.ip[0];
+		}
+		else
+		{
+			// Failed to parse realip, use IP from proxy connection
+			Con_DPrintf("WARNING: Failed to parse realip from userinfo: %s\n", realip_str);
+		}
+	}
+	// realip is empty, use IP from proxy connection (normal case)
+	
 	MD5Context_t ctx;
 	MD5Init(&ctx);
 #ifdef REHLDS_FIXES
@@ -2539,6 +2557,9 @@ void EXT_FUNC SV_ConnectClient_internal(void)
 	Q_strncpy(host_client->userinfo, userinfo, MAX_INFO_STRING);
 #endif
 	host_client->userinfo[MAX_INFO_STRING - 1] = 0;
+
+	// Remove realip key after it has been processed
+	Info_RemoveKey(host_client->userinfo, "realip");
 
 	SV_ExtractFromUserinfo(host_client);
 	Info_SetValueForStarKey(host_client->userinfo, "*sid", va("%lld", host_client->network_userid.m_SteamID), MAX_INFO_STRING);
